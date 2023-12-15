@@ -1,2 +1,2 @@
-# FEUP_PFL
-Functional and Logic Programming
+# FEUP - PFL
+Functional and Logic Programming TP2 based on Haskell language.
