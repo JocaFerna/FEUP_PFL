@@ -118,11 +118,25 @@ testAssembler code = (stack2Str stack, state2Str state)
 
 -- TODO: Define the types Aexp, Bexp, Stm and Program
 
--- compA :: Aexp -> Code
-compA = undefined -- TODO
+data Aexp = Num Integer | Var String | AddA Aexp Aexp | SubA Aexp Aexp | MultA Aexp Aexp  deriving Show
+data Bexp = EquB Aexp Aexp | LeB Aexp Aexp | AndB Bexp Bexp | NegB Bexp | TruB | FalsB  deriving Show
+data Stm = BranchS Bexp Stm Stm | LoopS Bexp Stm 
 
--- compB :: Bexp -> Code
-compB = undefined -- TODO
+compA :: Aexp -> Code
+
+compA (Num a) = [Push a]
+compA (Var a) = [Fetch a]
+compA (AddA a b) = compA b ++ compA a ++ [Add]
+compA (SubA a b) = compA b ++ compA a ++ [Sub]
+compA (MultA a b) = compA b ++ compA a ++ [Mult]
+
+compB :: Bexp -> Code
+compB (EquB a b) = compA b ++ compA a ++ [Equ]
+compB (LeB a b) = compA b ++ compA a ++ [Le]
+compB (AndB a b) = compB b ++ compB a ++ [And]
+compB (NegB a) = compB a ++ [Neg]
+compB TruB = [Push 1]
+compB FalsB = [Push 0]
 
 -- compile :: Program -> Code
 compile = undefined -- TODO
