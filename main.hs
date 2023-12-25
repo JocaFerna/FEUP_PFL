@@ -4,6 +4,7 @@
 import Debug.Trace
 import Data.List (sortBy)
 import Data.Ord (comparing)
+import qualified Data.Text as T
 -- Do not modify our definition of Inst and Code
 data Inst =
   Push Integer | Add | Mult | Sub | Tru | Fals | Equ | Le | And | Neg | Fetch String | Store String | Noop |
@@ -120,7 +121,7 @@ testAssembler code = (stack2Str stack, state2Str state)
 
 data Aexp = Num Integer | Var String | AddA Aexp Aexp | SubA Aexp Aexp | MultA Aexp Aexp  deriving Show
 data Bexp = EquB Aexp Aexp | LeB Aexp Aexp | AndB Bexp Bexp | NegB Bexp | TruB | FalsB  deriving Show
-data Stm = BranchS Bexp Stm Stm | LoopS Bexp Stm 
+data Stm = BranchS Bexp Stm Stm | LoopS Bexp Stm | Normal Aexp
 
 compA :: Aexp -> Code
 
@@ -144,6 +145,73 @@ compile = undefined -- TODO
 -- parse :: String -> Program
 parse = undefined -- TODO
 
+lexer :: String -> [String]
+lexer string = lexeracc string [] []
+
+lexeracc :: String -> [String] -> String -> [String]
+lexeracc [] acc stracc | stracc == "" =  acc
+                       | otherwise = (acc++[stracc])
+lexeracc ('w':'h':'i':'l':'e':rest) acc stracc
+                            | stracc == "" = lexeracc rest (acc++["while"]) stracc
+                            | otherwise = lexeracc rest (acc++[stracc]++["while"]) []
+lexeracc (' ':rest) acc stracc
+                            | stracc == "" = lexeracc rest acc []
+                            | otherwise = lexeracc rest (acc++[stracc]) []
+lexeracc ('i':'f':rest) acc stracc
+                      	    | stracc == "" = lexeracc rest (acc++["if"]) stracc
+                            | otherwise = lexeracc rest (acc++[stracc]++["if"]) []
+lexeracc ('t':'h':'e':'n':rest) acc stracc
+                            | stracc == "" = lexeracc rest (acc++["then"]) stracc
+                            | otherwise = lexeracc rest (acc++[stracc]++["then"]) []
+lexeracc ('e':'l':'s':'e':rest) acc stracc
+                            | stracc == "" = lexeracc rest (acc++["else"]) stracc
+                            | otherwise = lexeracc rest (acc++[stracc]++["else"]) []
+lexeracc ('*':rest) acc stracc
+                            | stracc == "" = lexeracc rest (acc++["*"]) stracc
+                            | otherwise = lexeracc rest (acc++[stracc]++["*"]) []
+lexeracc ('+':rest) acc stracc
+                            | stracc == "" = lexeracc rest (acc++["+"]) stracc
+                            | otherwise = lexeracc rest (acc++[stracc]++["+"]) []
+lexeracc ('/':rest) acc stracc
+                            | stracc == "" = lexeracc rest (acc++["/"]) stracc
+                            | otherwise = lexeracc rest (acc++[stracc]++["/"]) []
+lexeracc ('-':rest) acc stracc
+                            | stracc == "" = lexeracc rest (acc++["-"]) stracc
+                            | otherwise = lexeracc rest (acc++[stracc]++["-"]) []
+lexeracc (';':rest) acc stracc
+                            | stracc == "" = lexeracc rest (acc++[";"]) stracc
+                            | otherwise = lexeracc rest (acc++[stracc]++[";"]) []
+lexeracc ('(':rest) acc stracc
+                            | stracc == "" = lexeracc rest (acc++["("]) stracc
+                            | otherwise = lexeracc rest (acc++[stracc]++["("]) []
+lexeracc (')':rest) acc stracc
+                            | stracc == "" = lexeracc rest (acc++[")"]) stracc
+                            | otherwise = lexeracc rest (acc++[stracc]++[")"]) []
+lexeracc ('<':'=':rest) acc stracc
+                            | stracc == "" = lexeracc rest (acc++["<="]) stracc
+                            | otherwise = lexeracc rest (acc++[stracc]++["<="]) []
+lexeracc ('=':'=':rest) acc stracc
+                            | stracc == "" = lexeracc rest (acc++["=="]) stracc
+                            | otherwise = lexeracc rest (acc++[stracc]++["=="]) []
+lexeracc ('n':'o':'t':rest) acc stracc
+                            | stracc == "" = lexeracc rest (acc++["not"]) stracc
+                            | otherwise = lexeracc rest (acc++[stracc]++["not"]) []
+lexeracc ('=':rest) acc stracc
+                            | stracc == "" = lexeracc rest (acc++["="]) stracc
+                            | otherwise = lexeracc rest (acc++[stracc]++["="]) []
+lexeracc ('a':'n':'d':rest) acc stracc
+                            | stracc == "" = lexeracc rest (acc++["and"]) stracc
+                            | otherwise = lexeracc rest (acc++[stracc]++["and"]) []
+lexeracc (':':'=':rest) acc stracc
+                            | stracc == "" = lexeracc rest (acc++[":="]) stracc
+                            | otherwise = lexeracc rest (acc++[stracc]++[":="]) []
+lexeracc ('d':'o':rest) acc stracc
+                            | stracc == "" = lexeracc rest (acc++[":="]) stracc
+                            | otherwise = lexeracc rest (acc++[stracc]++[":="]) []                              
+lexeracc (a:rest) acc stracc = lexeracc rest acc (stracc++[a])
+
+teststr :: String -> String
+teststr ('w':'h':'e':'r':'e':rest) = "Aqui"
 -- To help you test your parser
 testParser :: String -> (String, String)
 testParser programCode = (stack2Str stack, state2Str state)
