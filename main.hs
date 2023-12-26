@@ -3,7 +3,9 @@
 -- Part 1
 import Debug.Trace
 import Data.List (sortBy)
+import Data.List (elemIndex)
 import Data.Ord (comparing)
+import Text.Read (readMaybe)
 import qualified Data.Text as T
 -- Do not modify our definition of Inst and Code
 data Inst =
@@ -121,7 +123,7 @@ testAssembler code = (stack2Str stack, state2Str state)
 
 data Aexp = Num Integer | Var String | AddA Aexp Aexp | SubA Aexp Aexp | MultA Aexp Aexp  deriving Show
 data Bexp = EquB Aexp Aexp | LeB Aexp Aexp | AndB Bexp Bexp | NegB Bexp | TruB | FalsB  deriving Show
-data Stm = BranchS Bexp Stm Stm | LoopS Bexp Stm | Normal Aexp
+data Stm = BranchS Bexp Stm Stm | LoopS Bexp Stm | VarAssign String Aexp deriving Show
 
 compA :: Aexp -> Code
 
@@ -142,8 +144,110 @@ compB FalsB = [Push 0]
 -- compile :: Program -> Code
 compile = undefined -- TODO
 
--- parse :: String -> Program
-parse = undefined -- TODO
+parse :: String -> [Stm]
+parse str = parseaux (lexer str) []
+
+parseaux :: [String] -> [Stm] -> [Stm]
+parseaux [] stm = stm
+parseaux (a:":=":rest) stm = let x = (getjustvalue (elemIndex ";" (a:":=":rest)))
+                              in case parseSumOrProdOrIntOrPar (drop 2 (take (x-1) (a:":=":rest))) of
+                                Just (expr,[]) -> parseaux (drop x (a:":=":rest)) (stm++[(VarAssign a (expr))])
+                                Nothing -> error "Parse Error"
+                                _ -> error "Parse Error"
+parseaux ("(":rest) stm = parseaux (take ((length ("(":rest))-1) ("(":rest)) stm
+parseaux (";":rest) stm = parseaux rest stm
+parseaux ("if":rest) stm = let thenpos = (getjustvalue (elemIndex "then" ("if":rest)))
+                               elsepos = (getjustvalue (elemIndex "else" ("if":rest)))
+                               arrayafter = (drop (elsepos) ("if":rest))
+                            in case takefirstelement arrayafter of
+                              "(" -> parseaux (drop (getjustvalue (elemIndex ")" arrayafter)) arrayafter) (stm++(parseaux (drop thenpos (take elsepos ("if":rest))) [])++(parseaux (drop 1 (take ((getjustvalue (elemIndex ")" arrayafter))) arrayafter )) [] ))
+
+listatest = ["if","(","not","True","and","2","<=","5","=","3","==","4",")","then","x",":=","1",";","else","(","y",":=","2",";",")"]
+
+
+takefirstelement :: [String] -> String
+takefirstelement ("(":rest) = "("
+takefirstelement (a:rest) = a
+
+parseInt :: [String] -> Maybe (Aexp,[String])
+parseInt (n:rest) =
+  case (readMaybe n :: Maybe Integer) of
+    Just f -> Just (Num f, rest)
+    Nothing -> Just (Var n,rest)
+parseInt _ = Nothing
+
+parseProdOrInt :: [String] -> Maybe(Aexp,[String])
+parseProdOrInt str =
+  case parseInt str of
+    Just (expr1,("*":restString1)) ->
+      case parseProdOrInt restString1 of
+        Just (expr2,restString2) ->
+          Just (MultA expr1 expr2,restString2)
+        Nothing                  -> Nothing
+    result -> result
+
+parseSumOrProdOrInt :: [String] -> Maybe(Aexp,[String])
+parseSumOrProdOrInt str =
+  case parseProdOrInt str of
+    Just (expr1,("+":restString1)) ->
+      case parseSumOrProdOrInt restString1 of
+        Just (expr2,restString2) ->
+          Just (AddA expr1 expr2,restString2)
+        Nothing                  -> Nothing
+    Just (expr1,("-":restString1)) ->
+      case parseSumOrProdOrInt restString1 of
+        Just (expr2,restString2) ->
+          Just (SubA expr1 expr2,restString2)
+        Nothing                  -> Nothing
+    result -> result
+
+parseIntOrParentExpr :: [String] -> Maybe (Aexp,[String])
+parseIntOrParentExpr ("(":rest) =
+  case parseSumOrProdOrIntOrPar rest of
+    Just (expr,(")":restString1)) -> Just (expr,restString1)
+    Just _ -> Nothing
+    Nothing -> Nothing
+parseIntOrParentExpr (n:rest) =
+  case (readMaybe n :: Maybe Integer) of
+    Just f -> Just (Num f, rest)
+    Nothing -> Just (Var n,rest)
+parseIntOrParentExpr _ = Nothing
+
+parseProdOrIntOrPar :: [String] -> Maybe (Aexp,[String])
+parseProdOrIntOrPar rest =
+  case parseIntOrParentExpr rest of
+    Just (expr1,("*":restString1)) ->
+      case parseProdOrIntOrPar restString1 of
+        Just (expr2,restString2) -> Just (MultA expr1 expr2, restString2)
+        Nothing -> Nothing
+    result -> result
+
+parseSumOrProdOrIntOrPar :: [String] -> Maybe (Aexp,[String])
+parseSumOrProdOrIntOrPar rest =
+  case parseProdOrIntOrPar rest of
+    Just (expr1,("+":restString1)) ->
+      case parseSumOrProdOrIntOrPar restString1 of
+        Just (expr2,restString2) -> Just (AddA expr1 expr2, restString2)
+        Nothing -> Nothing
+    Just (expr1,("-":restString1)) ->
+      case parseSumOrProdOrIntOrPar restString1 of
+        Just (expr2,restString2) -> Just (SubA expr1 expr2, restString2)
+        Nothing -> Nothing
+    result -> result
+
+--processAExp :: [String] -> Stm
+--processAExp (a:":=":rest) = (VarAssign a (processAExp rest))
+--processAExp resto
+--                | (verifyelem "(" resto) == "Found" =
+processAExp = undefined
+
+getjustvalue :: Num a => Maybe a -> a
+getjustvalue (Just a) = a+1
+
+--verifyelem :: Eq => a -> [a] -> String
+--verifyelem elem list
+--                  | (elemIndex elem list) == Nothing = "NotFound"
+--                  | otherwise = "Found"
 
 lexer :: String -> [String]
 lexer string = lexeracc string [] []
@@ -210,8 +314,6 @@ lexeracc ('d':'o':rest) acc stracc
                             | otherwise = lexeracc rest (acc++[stracc]++[":="]) []                              
 lexeracc (a:rest) acc stracc = lexeracc rest acc (stracc++[a])
 
-teststr :: String -> String
-teststr ('w':'h':'e':'r':'e':rest) = "Aqui"
 -- To help you test your parser
 testParser :: String -> (String, String)
 testParser programCode = (stack2Str stack, state2Str state)
@@ -219,9 +321,10 @@ testParser programCode = (stack2Str stack, state2Str state)
 
 -- Examples:
 -- testParser "x := 5; x := x - 1;" == ("","x=4")
--- testParser "if (not True and 2 <= 5 = 3 == 4) then x :=1 else y := 2" == ("","y=2")
+-- testParser "if (not True and 2 <= 5 = 3 == 4) then x :=1; else y := 2" == ("","y=2")
 -- testParser "x := 42; if x <= 43 then x := 1; else (x := 33; x := x+1;)" == ("","x=1")
 -- testParser "x := 42; if x <= 43 then x := 1; else x := 33; x := x+1;" == ("","x=2")
 -- testParser "x := 42; if x <= 43 then x := 1; else x := 33; x := x+1; z := x+x;" == ("","x=2,z=4")
 -- testParser "x := 2; y := (x - 3)*(4 + 2*3); z := x +x*(2);" == ("","x=2,y=-10,z=6")
 -- testParser "i := 10; fact := 1; while (not(i == 1)) do (fact := fact * i; i := i - 1;);" == ("","fact=3628800,i=1")
+-- 1+(14*14)
