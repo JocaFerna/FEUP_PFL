@@ -123,7 +123,8 @@ testAssembler code = (stack2Str stack, state2Str state)
 
 data Aexp = Num Integer | Var String | AddA Aexp Aexp | SubA Aexp Aexp | MultA Aexp Aexp  deriving Show
 data Bexp = EquB Aexp Aexp | LeB Aexp Aexp | AndB Bexp Bexp | NegB Bexp | TruB | FalsB  deriving Show
-data Stm = BranchS Bexp Stm Stm | LoopS Bexp Stm | VarAssign String Aexp deriving Show
+data Stm = BranchS Bexp [Stm] [Stm] | LoopS Bexp [Stm] | VarAssign String Aexp deriving Show
+data NotSure = AExpr Aexp | BExpr Bexp deriving Show
 
 compA :: Aexp -> Code
 
@@ -154,15 +155,21 @@ parseaux (a:":=":rest) stm = let x = (getjustvalue (elemIndex ";" (a:":=":rest))
                                 Just (expr,[]) -> parseaux (drop x (a:":=":rest)) (stm++[(VarAssign a (expr))])
                                 Nothing -> error "Parse Error"
                                 _ -> error "Parse Error"
-parseaux ("(":rest) stm = parseaux (take ((length ("(":rest))-1) ("(":rest)) stm
+parseaux ("(":rest) stm = parseaux (drop 1 (take ((length ("(":rest))-1) ("(":rest))) stm
 parseaux (";":rest) stm = parseaux rest stm
 parseaux ("if":rest) stm = let thenpos = (getjustvalue (elemIndex "then" ("if":rest)))
                                elsepos = (getjustvalue (elemIndex "else" ("if":rest)))
                                arrayafter = (drop (elsepos) ("if":rest))
                             in case takefirstelement arrayafter of
-                              "(" -> parseaux (drop (getjustvalue (elemIndex ")" arrayafter)) arrayafter) (stm++(parseaux (drop thenpos (take elsepos ("if":rest))) [])++(parseaux (drop 1 (take ((getjustvalue (elemIndex ")" arrayafter))) arrayafter )) [] ))
+                              "(" -> parseaux (drop (getjustvalue (elemIndex ")" arrayafter)) arrayafter) (stm++(parseaux (drop thenpos (take (elsepos-1) ("if":rest))) [])++(parseaux (take (getjustvalue (elemIndex ")" arrayafter)) arrayafter ) [] ))
+                              _  -> parseaux (drop (getjustvalue (elemIndex ";" arrayafter)) arrayafter) (stm++(parseaux (drop thenpos (take (elsepos-1) ("if":rest))) [])++(parseaux (take (getjustvalue (elemIndex ";" arrayafter)) arrayafter ) [] ))
+parseaux ("while":rest) stm = let dopos = (getjustvalue (elemIndex "do" ("while":rest)))
+                                  arrayafter = (drop (dopos) ("while":rest))
+                              in case takefirstelement arrayafter of
+                                "(" -> parseaux (drop (getjustvalue (elemIndex ")" arrayafter)) arrayafter) (stm++(parseaux (take (getjustvalue (elemIndex ")" arrayafter)) arrayafter ) [] ))
+                                _ -> parseaux (drop (getjustvalue (elemIndex ";" arrayafter)) arrayafter) (stm++(parseaux (take (getjustvalue (elemIndex ";" arrayafter)) arrayafter ) [] ))
 
-listatest = ["if","(","not","True","and","2","<=","5","=","3","==","4",")","then","x",":=","1",";","else","(","y",":=","2",";",")"]
+listatest = ["i",":=","10",";","fact",":=","1",";","while","(","not","(","i","==","1",")",")","do","(","fact",":=","fact","*","i",";","i",":=","i","-","1",";",")",";"]
 
 
 takefirstelement :: [String] -> String
@@ -234,6 +241,10 @@ parseSumOrProdOrIntOrPar rest =
         Just (expr2,restString2) -> Just (SubA expr1 expr2, restString2)
         Nothing -> Nothing
     result -> result
+
+------------- PARSE Bexp ----------------
+
+-----------------------------------------
 
 --processAExp :: [String] -> Stm
 --processAExp (a:":=":rest) = (VarAssign a (processAExp rest))
@@ -310,8 +321,8 @@ lexeracc (':':'=':rest) acc stracc
                             | stracc == "" = lexeracc rest (acc++[":="]) stracc
                             | otherwise = lexeracc rest (acc++[stracc]++[":="]) []
 lexeracc ('d':'o':rest) acc stracc
-                            | stracc == "" = lexeracc rest (acc++[":="]) stracc
-                            | otherwise = lexeracc rest (acc++[stracc]++[":="]) []                              
+                            | stracc == "" = lexeracc rest (acc++["do"]) stracc
+                            | otherwise = lexeracc rest (acc++[stracc]++["do"]) []                              
 lexeracc (a:rest) acc stracc = lexeracc rest acc (stracc++[a])
 
 -- To help you test your parser
@@ -321,10 +332,15 @@ testParser programCode = (stack2Str stack, state2Str state)
 
 -- Examples:
 -- testParser "x := 5; x := x - 1;" == ("","x=4")
--- testParser "if (not True and 2 <= 5 = 3 == 4) then x :=1; else y := 2" == ("","y=2")
--- testParser "x := 42; if x <= 43 then x := 1; else (x := 33; x := x+1;)" == ("","x=1")
+-- testParser "x := 0 - 2;" == ("","x=-2")
+-- testParser "if (not True and 2 <= 5 = 3 == 4) then x :=1; else y := 2;" == ("","y=2")
+-- testParser "x := 42; if x <= 43 then x := 1; else (x := 33; x := x+1;);" == ("","x=1")
 -- testParser "x := 42; if x <= 43 then x := 1; else x := 33; x := x+1;" == ("","x=2")
 -- testParser "x := 42; if x <= 43 then x := 1; else x := 33; x := x+1; z := x+x;" == ("","x=2,z=4")
--- testParser "x := 2; y := (x - 3)*(4 + 2*3); z := x +x*(2);" == ("","x=2,y=-10,z=6")
+-- testParser "x := 44; if x <= 43 then x := 1; else (x := 33; x := x+1;); y := x2;" == ("","x=34,y=68")
+-- testParser "x := 42; if x <= 43 then (x := 33; x := x+1;) else x := 1;" == ("","x=34")
+-- testParser "if (1 == 0+1 = 2+1 == 3) then x := 1; else x := 2;" == ("","x=1")
+-- testParser "if (1 == 0+1 = (2+1 == 4)) then x := 1; else x := 2;" == ("","x=2")
+-- testParser "x := 2; y := (x - 3)*(4 + 23); z := x +x*(2);" == ("","x=2,y=-10,z=6")
 -- testParser "i := 10; fact := 1; while (not(i == 1)) do (fact := fact * i; i := i - 1;);" == ("","fact=3628800,i=1")
 -- 1+(14*14)
