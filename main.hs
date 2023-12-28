@@ -122,7 +122,7 @@ testAssembler code = (stack2Str stack, state2Str state)
 -- TODO: Define the types Aexp, Bexp, Stm and Program
 
 data Aexp = Num Integer | Var String | AddA Aexp Aexp | SubA Aexp Aexp | MultA Aexp Aexp  deriving Show
-data Bexp = EquB Aexp Aexp | LeB Aexp Aexp | AndB Bexp Bexp | NegB Bexp | TruB | FalsB  deriving Show
+data Bexp = EquB Aexp Aexp | LeB Aexp Aexp | AndB Bexp Bexp | EquBoolB Bexp Bexp | NegB Bexp | TruB | FalsB  deriving Show
 data Stm = BranchS Bexp [Stm] [Stm] | LoopS Bexp [Stm] | VarAssign String Aexp deriving Show
 data NotSure = AExpr Aexp | BExpr Bexp deriving Show
 
@@ -169,7 +169,7 @@ parseaux ("while":rest) stm = let dopos = (getjustvalue (elemIndex "do" ("while"
                                 "(" -> parseaux (drop (getjustvalue (elemIndex ")" arrayafter)) arrayafter) (stm++(parseaux (take (getjustvalue (elemIndex ")" arrayafter)) arrayafter ) [] ))
                                 _ -> parseaux (drop (getjustvalue (elemIndex ";" arrayafter)) arrayafter) (stm++(parseaux (take (getjustvalue (elemIndex ";" arrayafter)) arrayafter ) [] ))
 
-listatest = ["i",":=","10",";","fact",":=","1",";","while","(","not","(","i","==","1",")",")","do","(","fact",":=","fact","*","i",";","i",":=","i","-","1",";",")",";"]
+listatest = ["not","True","and","2","<=","5","=","3","==","4"]
 
 
 takefirstelement :: [String] -> String
@@ -243,6 +243,57 @@ parseSumOrProdOrIntOrPar rest =
     result -> result
 
 ------------- PARSE Bexp ----------------
+
+parseLessOrEqOrTrueOrFalseOrParentOrArith :: [String] -> Maybe (Bexp,[String])
+parseLessOrEqOrTrueOrFalseOrParentOrArith ("(":rest) =
+  case parseAndandBoolEq rest of
+    Just (expr,(")":restString1)) -> Just (expr,restString1)
+    Just _ -> Nothing
+    Nothing -> Nothing
+parseLessOrEqOrTrueOrFalseOrParentOrArith ("True":rest) = Just (TruB,rest)
+parseLessOrEqOrTrueOrFalseOrParentOrArith ("False":rest) = Just (FalsB,rest)
+parseLessOrEqOrTrueOrFalseOrParentOrArith rest =
+  case parseSumOrProdOrIntOrPar rest of
+    Just (expr1,("<=":restString1)) ->
+      case parseSumOrProdOrIntOrPar restString1 of
+        Just (expr2,restString2) ->
+          Just (LeB expr1 expr2, restString2)
+        Nothing -> Nothing
+    Just (expr1,("==":restString1)) ->
+      case parseSumOrProdOrIntOrPar restString1 of
+        Just (expr2,restString2) ->
+          Just (LeB expr1 expr2, restString2)
+        Nothing -> Nothing
+    result -> Nothing
+
+parseNegAndLessAndEq :: [String] -> Maybe(Bexp, [String])
+parseNegAndLessAndEq ("not":rest) =
+    case parseLessOrEqOrTrueOrFalseOrParentOrArith rest of
+      Just (expr1,restString1) ->
+        Just (NegB expr1,restString1)
+      result -> result
+parseNegAndLessAndEq rest = parseLessOrEqOrTrueOrFalseOrParentOrArith rest
+
+parseBoolEqAndNeg :: [String] -> Maybe(Bexp, [String])
+parseBoolEqAndNeg rest =
+  case parseNegAndLessAndEq rest of
+    Just (expr1, ("=":restString1)) ->
+      case parseBoolEqAndNeg restString1 of
+        Just (expr2, restString2) ->
+          Just (EquBoolB expr1 expr2, restString2)
+        Nothing -> Nothing
+    result -> result
+
+parseAndandBoolEq :: [String] -> Maybe(Bexp,[String])
+parseAndandBoolEq rest =
+  case parseBoolEqAndNeg rest of
+    Just (expr1, ("and":restString1)) ->
+      case parseAndandBoolEq restString1 of
+        Just (expr2, restString2) ->
+          Just (AndB expr1 expr2, restString2)
+        Nothing -> Nothing
+    result -> result
+    
 
 -----------------------------------------
 
