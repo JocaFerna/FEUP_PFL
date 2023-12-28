@@ -155,7 +155,7 @@ parseaux (a:":=":rest) stm = let x = (getjustvalue (elemIndex ";" (a:":=":rest))
                                 Just (expr,[]) -> parseaux (drop x (a:":=":rest)) (stm++[(VarAssign a (expr))])
                                 Nothing -> error "Parse Error"
                                 _ -> error "Parse Error"
-parseaux ("(":rest) stm = parseaux (drop 1 (take ((length ("(":rest))-1) ("(":rest))) stm
+parseaux ("(":rest) stm = parseaux (drop (getjustvalue (elemIndex ")" ("(":rest))) ("(":rest)) (stm++(parseaux (drop 1 (take ((getjustvalue (elemIndex ")" ("(":rest)))-1) ("(":rest))) []))
 parseaux (";":rest) stm = parseaux rest stm
 parseaux ("if":rest) stm = let thenpos = (getjustvalue (elemIndex "then" ("if":rest)))
                                elsepos = (getjustvalue (elemIndex "else" ("if":rest)))
@@ -341,6 +341,6 @@ testParser programCode = (stack2Str stack, state2Str state)
 -- testParser "x := 42; if x <= 43 then (x := 33; x := x+1;) else x := 1;" == ("","x=34")
 -- testParser "if (1 == 0+1 = 2+1 == 3) then x := 1; else x := 2;" == ("","x=1")
 -- testParser "if (1 == 0+1 = (2+1 == 4)) then x := 1; else x := 2;" == ("","x=2")
--- testParser "x := 2; y := (x - 3)*(4 + 23); z := x +x*(2);" == ("","x=2,y=-10,z=6")
+-- testParser "x := 2; y := (x - 3)*(4 + 2*3); z := x +x*(2);" == ("","x=2,y=-10,z=6")
 -- testParser "i := 10; fact := 1; while (not(i == 1)) do (fact := fact * i; i := i - 1;);" == ("","fact=3628800,i=1")
 -- 1+(14*14)
