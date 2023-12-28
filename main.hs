@@ -161,16 +161,24 @@ parseaux ("if":rest) stm = let thenpos = (getjustvalue (elemIndex "then" ("if":r
                                elsepos = (getjustvalue (elemIndex "else" ("if":rest)))
                                arrayafter = (drop (elsepos) ("if":rest))
                             in case takefirstelement arrayafter of
-                              "(" -> parseaux (drop (getjustvalue (elemIndex ")" arrayafter)) arrayafter) (stm++(parseaux (drop thenpos (take (elsepos-1) ("if":rest))) [])++(parseaux (take (getjustvalue (elemIndex ")" arrayafter)) arrayafter ) [] ))
-                              _  -> parseaux (drop (getjustvalue (elemIndex ";" arrayafter)) arrayafter) (stm++(parseaux (drop thenpos (take (elsepos-1) ("if":rest))) [])++(parseaux (take (getjustvalue (elemIndex ";" arrayafter)) arrayafter ) [] ))
+                              "(" -> parseaux (drop (getjustvalue (elemIndex ")" arrayafter)) arrayafter) (stm++[BranchS (getJustvalueBexp ((parseAndandBoolEq (checkifPar (drop 1 (take (thenpos-1) ("if":rest))))))) (parseaux (drop thenpos (take (elsepos-1) ("if":rest))) []) (parseaux (take (getjustvalue (elemIndex ")" arrayafter)) arrayafter ) [] )])
+                              _  -> parseaux (drop (getjustvalue (elemIndex ";" arrayafter)) arrayafter) (stm++[BranchS (getJustvalueBexp ((parseAndandBoolEq (checkifPar (drop 1 (take (thenpos-1) ("if":rest))))))) (parseaux (drop thenpos (take (elsepos-1) ("if":rest))) []) (parseaux (take (getjustvalue (elemIndex ";" arrayafter)) arrayafter ) [] )])
 parseaux ("while":rest) stm = let dopos = (getjustvalue (elemIndex "do" ("while":rest)))
                                   arrayafter = (drop (dopos) ("while":rest))
                               in case takefirstelement arrayafter of
-                                "(" -> parseaux (drop (getjustvalue (elemIndex ")" arrayafter)) arrayafter) (stm++(parseaux (take (getjustvalue (elemIndex ")" arrayafter)) arrayafter ) [] ))
-                                _ -> parseaux (drop (getjustvalue (elemIndex ";" arrayafter)) arrayafter) (stm++(parseaux (take (getjustvalue (elemIndex ";" arrayafter)) arrayafter ) [] ))
+                                "(" -> parseaux (drop (getjustvalue (elemIndex ")" arrayafter)) arrayafter) (stm++[LoopS (getJustvalueBexp ((parseAndandBoolEq (checkifPar (drop 1 (take (dopos-1) ("while":rest))))))) (parseaux (take (getjustvalue (elemIndex ")" arrayafter)) arrayafter ) [] )])
+                                _ -> parseaux (drop (getjustvalue (elemIndex ";" arrayafter)) arrayafter) (stm++[LoopS (getJustvalueBexp ((parseAndandBoolEq (checkifPar (drop 1 (take (dopos-1) ("while":rest))))))) (parseaux (take (getjustvalue (elemIndex ";" arrayafter)) arrayafter ) [] )])
 
 listatest = ["not","True","and","2","<=","5","=","3","==","4"]
 
+getJustvalueBexp :: Maybe (Bexp,[String]) -> Bexp
+getJustvalueBexp (Just (a,[")"])) = a
+getJustvalueBexp (Just (a,[])) = a
+getJustvalueBexp Nothing = error "Parse Error"
+
+checkifPar :: [String] -> [String]
+checkifPar ("(":rest) = drop 1 (take (length ("(":rest)) ("(":rest))
+checkifPar rest = rest
 
 takefirstelement :: [String] -> String
 takefirstelement ("(":rest) = "("
@@ -388,7 +396,7 @@ testParser programCode = (stack2Str stack, state2Str state)
 -- testParser "x := 42; if x <= 43 then x := 1; else (x := 33; x := x+1;);" == ("","x=1")
 -- testParser "x := 42; if x <= 43 then x := 1; else x := 33; x := x+1;" == ("","x=2")
 -- testParser "x := 42; if x <= 43 then x := 1; else x := 33; x := x+1; z := x+x;" == ("","x=2,z=4")
--- testParser "x := 44; if x <= 43 then x := 1; else (x := 33; x := x+1;); y := x2;" == ("","x=34,y=68")
+-- testParser "x := 44; if x <= 43 then x := 1; else (x := 33; x := x+1;); y := x*2;" == ("","x=34,y=68")
 -- testParser "x := 42; if x <= 43 then (x := 33; x := x+1;) else x := 1;" == ("","x=34")
 -- testParser "if (1 == 0+1 = 2+1 == 3) then x := 1; else x := 2;" == ("","x=1")
 -- testParser "if (1 == 0+1 = (2+1 == 4)) then x := 1; else x := 2;" == ("","x=2")
