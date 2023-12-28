@@ -125,6 +125,8 @@ data Aexp = Num Integer | Var String | AddA Aexp Aexp | SubA Aexp Aexp | MultA A
 data Bexp = EquB Aexp Aexp | LeB Aexp Aexp | AndB Bexp Bexp | EquBoolB Bexp Bexp | NegB Bexp | TruB | FalsB  deriving Show
 data Stm = BranchS Bexp [Stm] [Stm] | LoopS Bexp [Stm] | VarAssign String Aexp deriving Show
 data NotSure = AExpr Aexp | BExpr Bexp deriving Show
+type Program = [Stm]
+
 
 compA :: Aexp -> Code
 
@@ -142,8 +144,14 @@ compB (NegB a) = compB a ++ [Neg]
 compB TruB = [Push 1]
 compB FalsB = [Push 0]
 
--- compile :: Program -> Code
-compile = undefined -- TODO
+compile :: Program -> Code
+compile stms = concatMap compileStm stms
+
+compileStm :: Stm -> Code
+compileStm stm = case stm of
+  VarAssign var aexp -> compA aexp ++ [Store var]
+  BranchS bexp stm1 stm2  -> compB bexp ++ [Branch (compile stm1) (compile stm2)]
+  LoopS bexp stm     -> [Loop (compB bexp) (compile stm)]
 
 parse :: String -> [Stm]
 parse str = parseaux (lexer str) []
