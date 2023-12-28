@@ -153,7 +153,7 @@ compileStm stm = case stm of
   BranchS bexp stm1 stm2  -> compB bexp ++ [Branch (compile stm1) (compile stm2)]
   LoopS bexp stm     -> [Loop (compB bexp) (compile stm)]
 
-parse :: String -> [Stm]
+parse :: String -> Program
 parse str = parseaux (lexer str) []
 
 parseaux :: [String] -> [Stm] -> [Stm]
