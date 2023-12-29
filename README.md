@@ -8,6 +8,7 @@ This project is an implementation of the parsing + compiling of a simple imperat
 Group T12_G08
 
 João Pedro Dias Fernandes - up202108044
+
 Diogo Alexandre Oliveira da Silva - up202105327
 
 ## Part 1 - Assembler
