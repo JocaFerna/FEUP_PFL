@@ -1,4 +1,5 @@
 # FEUP - PFL
+
 Functional and Logic Programming TP2 based on Haskell language.
 
 This project is an implementation of the parsing + compiling of a simple imperative language.
@@ -28,6 +29,7 @@ data StackTypes =
 type Stack = [StackTypes]
 type State = [(String, StackTypes)]
 ```
+
 We have the already defined and given in the Specification file data Inst and type Code
 
 We defined by ourselfs the data StackTypes which is composed by Inteiro Integer or Booleano Bool, because it allows us to have two different data types in Stack, which is a type of list of StackTypes.
@@ -77,9 +79,20 @@ And now we have the following and relevant functions:
 
 - ```parse :: String -> [Stm]```: The parse function that, with help of ```parseaux```, it gives the string list to ```lexer``` and, with the string list received, iterates through it, matching the each case of structure in that language such as: variable assignment of arithmetic expressions, if-then-else statments and while-do loops, respecting also parenthesis in the last two structures.
 
--- INSERIR COMPILER, COMPA E COMPB
+Then we implemented the compiler that transforms abstract syntax trees (ASTs) of the language into a list of instructions (`Code`). The language supports arithmetic and boolean expressions, variable assignments, conditional branches, and loops.
 
+The `compA` function compiles arithmetic expressions (`Aexp`). It takes an `Aexp` and returns a list of instructions (`Code`).
 
-- 
+- If the `Aexp` is a number (`Num a`), it pushes the number onto the stack.
+- If the `Aexp` is a variable (`Var a`), it fetches the value of the variable.
+- If the `Aexp` is an addition, subtraction, or multiplication of two `Aexp`s, it compiles the two `Aexp`s and then adds an `Add`, `Sub`, or `Mult` instruction to the code.
 
+The `compB` function compiles boolean expressions (`Bexp`). It works similarly to `compA`, but handles boolean expressions instead of arithmetic expressions. It handles equality (`EquB`), less than or equal to (`LeB`), logical conjunction (`AndB`), logical negation (`NegB`), and boolean equality (`EquBoolB`). For `TruB` and `FalsB`, it pushes `Tru` and `Fals` onto the stack.
 
+The `compile` function compiles a list of statements (`Program`) into a list of instructions (`Code`). It does this by mapping the `compileStm` function over the list of statements and then concatenating the results.
+
+The `compileStm` function compiles a single statement (`Stm`).
+
+- If the `Stm` is a variable assignment (`VarAssign`), it compiles the `Aexp` and then adds a `Store` instruction to the code.
+- If the `Stm` is a conditional branch (`BranchS`), it compiles the `Bexp` and then adds a `Branch` instruction to the code, with the compiled code for the two statements as arguments.
+- If the `Stm` is a loop (`LoopS`), it adds a `Loop` instruction to the code, with the compiled `Bexp` and the compiled statement as arguments.
