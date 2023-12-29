@@ -57,15 +57,22 @@ In this part of the project, we are gonna to define a translation (compiler) fro
 
 To begin, we defined Data and Types that we are gonna to use in this part of project:
 
--- INSERIR DATA CODE E EXPLICAR A DATA (nao foi feito ainda por que ainda não está definido).
+```haskell
+data Aexp = Num Integer | Var String | AddA Aexp Aexp | SubA Aexp Aexp | MultA Aexp Aexp  deriving Show
+data Bexp = EquB Aexp Aexp | LeB Aexp Aexp | AndB Bexp Bexp | EquBoolB Bexp Bexp | NegB Bexp | TruB | FalsB  deriving Show
+data Stm = BranchS Bexp [Stm] [Stm] | LoopS Bexp [Stm] | VarAssign String Aexp deriving Show
+type Program = [Stm]
+```
+
+As instructed, we defined Aexp for arithmetic expressions (and respective constants), Bexp for boolean expressions (and respective constants), Stm for statements and structures (Note that: in LoopS (while loop) and BranchS (If-then-else), we defined [Stm] due to the possibility of then/else/do of having more than one statement inside them) and Program, which is simply a list of Stm.
 
 And now we have the following and relevant functions:
 
-- ```lexer :: String -> [String]```: This function basically separates every token on the string and stores it list of strings. Note that we call ```lexercall``` to allow to have a recursive call function and, in this lexer, the spaces between tokens aren't relevant, due to function call matching method used also here. If it doesn't match any of the function calls, it is considered a variable or a integer, and is stored into a string accumulator and, when finding a word that matches any of the function call pattern, it is stored in the accumulator string list.
+- ```lexer :: String -> [String]```: This function basically separates every token on the string and stores it list of strings. Note that we call ```lexeraux``` to allow to have a recursive call function and, in this lexer, the spaces between tokens aren't relevant, due to function call matching method used also here. If it doesn't match any of the function calls, it is considered a variable or a integer, and is stored into a string accumulator and, when finding a word that matches any of the function call pattern, it is stored in the accumulator string list.
 
 - ```parseSumOrProdOrIntOrPar :: [String] -> Maybe (Aexp,[String])```: A function called in parse that helps to parse arithmetic expressions, respecting operation priority and parenthesis.
 
--- INSERIR PARSE DE EXPRESSOES BOOLEANAS
+- ```parseAndandBoolEq :: [String] -> Maybe(Bexp,[String])```: A function called in parse that helps to parse boolean expressions (may contain arithmetic expressions inside it), respecting priority and parenthesis.
 
 - ```parse :: String -> [Stm]```: The parse function that, with help of ```parseaux```, it gives the string list to ```lexer``` and, with the string list received, iterates through it, matching the each case of structure in that language such as: variable assignment of arithmetic expressions, if-then-else statments and while-do loops, respecting also parenthesis in the last two structures.
 
