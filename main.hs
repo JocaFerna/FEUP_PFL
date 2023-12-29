@@ -95,8 +95,8 @@ run ((Tru: code), stackRest, state) = run (code,(Booleano True:stackRest),state)
 run ((Fetch x): code, stackRest,state) = run (code,((getJustInt(findState state x)):stackRest),state)
 run ((Store x): code, v1:stackRest,state) = run (code,stackRest,subsState state x v1)
 run (Branch c1 c2: code,(Booleano boole:stackRest),state)
-                                                    | boole == True = run (c1,stackRest,state)
-                                                    | otherwise = run (c2,stackRest,state)
+                                                    | boole == True = run (c1 ++ code,stackRest,state)
+                                                    | otherwise = run (c2 ++ code,stackRest,state)
 run (Noop: code,stack,state) = run (code,stack,state)
 run (Loop c1 c2: code,stack,state) = run ((c1 ++ [Branch (c2 ++ [Loop c1 c2]) [Noop]]) ++ code,stack,state)
 run (code,stack,state) = error $ "Run-time error" 
@@ -141,8 +141,9 @@ compB (EquB a b) = compA b ++ compA a ++ [Equ]
 compB (LeB a b) = compA b ++ compA a ++ [Le]
 compB (AndB a b) = compB b ++ compB a ++ [And]
 compB (NegB a) = compB a ++ [Neg]
-compB TruB = [Push 1]
-compB FalsB = [Push 0]
+compB (EquBoolB a b) = compB b ++ compB a ++ [Equ]
+compB TruB = [Tru]
+compB FalsB = [Fals]
 
 compile :: Program -> Code
 compile stms = concatMap compileStm stms
@@ -278,7 +279,7 @@ parseLessOrEqOrTrueOrFalseOrParentOrArith rest =
     Just (expr1,("==":restString1)) ->
       case parseSumOrProdOrIntOrPar restString1 of
         Just (expr2,restString2) ->
-          Just (LeB expr1 expr2, restString2)
+          Just (EquB expr1 expr2, restString2)
         Nothing -> Nothing
     result -> Nothing
 
@@ -398,16 +399,16 @@ testParser programCode = (stack2Str stack, state2Str state)
   where (_,stack,state) = run(compile (parse programCode), createEmptyStack, createEmptyState)
 
 -- Examples:
--- testParser "x := 5; x := x - 1;" == ("","x=4")
--- testParser "x := 0 - 2;" == ("","x=-2")
--- testParser "if (not True and 2 <= 5 = 3 == 4) then x :=1; else y := 2;" == ("","y=2")
--- testParser "x := 42; if x <= 43 then x := 1; else (x := 33; x := x+1;);" == ("","x=1")
--- testParser "x := 42; if x <= 43 then x := 1; else x := 33; x := x+1;" == ("","x=2")
--- testParser "x := 42; if x <= 43 then x := 1; else x := 33; x := x+1; z := x+x;" == ("","x=2,z=4")
--- testParser "x := 44; if x <= 43 then x := 1; else (x := 33; x := x+1;); y := x*2;" == ("","x=34,y=68")
--- testParser "x := 42; if x <= 43 then (x := 33; x := x+1;) else x := 1;" == ("","x=34")
--- testParser "if (1 == 0+1 = 2+1 == 3) then x := 1; else x := 2;" == ("","x=1")
--- testParser "if (1 == 0+1 = (2+1 == 4)) then x := 1; else x := 2;" == ("","x=2")
--- testParser "x := 2; y := (x - 3)*(4 + 2*3); z := x +x*(2);" == ("","x=2,y=-10,z=6")
--- testParser "i := 10; fact := 1; while (not(i == 1)) do (fact := fact * i; i := i - 1;);" == ("","fact=3628800,i=1")
+-- testParser "x := 5; x := x - 1;" == ("","x=4") True 
+-- testParser "x := 0 - 2;" == ("","x=-2") True
+-- testParser "if (not True and 2 <= 5 = 3 == 4) then x :=1; else y := 2;" == ("","y=2") True 
+-- testParser "x := 42; if x <= 43 then x := 1; else (x := 33; x := x+1;);" == ("","x=1") True
+-- testParser "x := 42; if x <= 43 then x := 1; else x := 33; x := x+1;" == ("","x=2") True
+-- testParser "x := 42; if x <= 43 then x := 1; else x := 33; x := x+1; z := x+x;" == ("","x=2,z=4") True
+-- testParser "x := 44; if x <= 43 then x := 1; else (x := 33; x := x+1;); y := x*2;" == ("","x=34,y=68") True
+-- testParser "x := 42; if x <= 43 then (x := 33; x := x+1;) else x := 1;" == ("","x=34") True
+-- testParser "if (1 == 0+1 = 2+1 == 3) then x := 1; else x := 2;" == ("","x=1") True
+-- testParser "if (1 == 0+1 = (2+1 == 4)) then x := 1; else x := 2;" == ("","x=2") True
+-- testParser "x := 2; y := (x - 3)*(4 + 2*3); z := x +x*(2);" == ("","x=2,y=-10,z=6") True
+-- testParser "i := 10; fact := 1; while (not(i == 1)) do (fact := fact * i; i := i - 1;);" == ("","fact=3628800,i=1") True
 -- 1+(14*14)
