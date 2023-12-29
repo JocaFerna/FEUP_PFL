@@ -20,7 +20,8 @@ To begin, we defined Data and Types that we are gonna to used in the entire proj
 
 ```haskell
 data Inst =
-  Push Integer | Add | Mult | Sub | Tru | Fals | Equ | Le | And | Neg | Fetch String | Store String | Noop |
+  Push Integer | Add | Mult | Sub | Tru | Fals | Equ | Le | And
+  | Neg | Fetch String | Store String | Noop |
   Branch Code Code | Loop Code Code
   deriving Show
 type Code = [Inst]
@@ -61,9 +62,12 @@ In this part of the project, we are gonna to define a translation (compiler) fro
 To begin, we defined Data and Types that we are gonna to use in this part of project:
 
 ```haskell
-data Aexp = Num Integer | Var String | AddA Aexp Aexp | SubA Aexp Aexp | MultA Aexp Aexp  deriving Show
-data Bexp = EquB Aexp Aexp | LeB Aexp Aexp | AndB Bexp Bexp | EquBoolB Bexp Bexp | NegB Bexp | TruB | FalsB  deriving Show
-data Stm = BranchS Bexp [Stm] [Stm] | LoopS Bexp [Stm] | VarAssign String Aexp deriving Show
+data Aexp = Num Integer | Var String | AddA Aexp Aexp
+  | SubA Aexp Aexp | MultA Aexp Aexp  deriving Show
+data Bexp = EquB Aexp Aexp | LeB Aexp Aexp | AndB Bexp Bexp
+  | EquBoolB Bexp Bexp | NegB Bexp | TruB | FalsB  deriving Show
+data Stm = BranchS Bexp [Stm] [Stm] | LoopS Bexp [Stm]
+  | VarAssign String Aexp deriving Show
 type Program = [Stm]
 ```
 
